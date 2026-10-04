@@ -1,4 +1,4 @@
-const CACHE_NAME='school-bus-pwa-v06-20261004';
+const CACHE_NAME='school-bus-pwa-v07-20261004';
 const CORE=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./qrcode-local.js'];
 self.addEventListener('install',event=>{self.skipWaiting();event.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(CORE)))});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE_NAME).map(k=>caches.delete(k)))));self.clients.claim()});
