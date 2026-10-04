@@ -110,14 +110,35 @@ function recalcCapacity(d,day){
   general.forEach((x,i)=>x.sch.status=i<available?"confirmed":"rejected");
  }));
 }
-function loginView(){app.innerHTML=`<div class="login-shell"><div class="login-card"><div class="brand"><div class="brand-mark">🚌</div><div><div>スクールバス乗車管理</div><div class="muted small">PWA 試作版 v0.8</div></div></div><div class="notice" style="margin-top:16px">実在の個人情報は使用していません。データはこのブラウザ内だけに保存されます。</div><div class="form-row"><div><label>ユーザーID</label><input id="loginId" placeholder="例 S001"></div><div><label>4桁英数PIN</label><input id="loginPin" maxlength="4" placeholder="例 A1B2"></div></div><button class="btn" style="width:100%;margin-top:12px" onclick="login()">ログイン</button><div class="demo-box"><b>デモログイン</b><div class="demo-grid"><button class="btn secondary" onclick="quickLogin('S001','A1B2')">児童・生徒</button><button class="btn secondary" onclick="quickLogin('P001','P1A1')">保護者</button><button class="btn secondary" onclick="quickLogin('T001','T1E1')">先生</button><button class="btn secondary" onclick="quickLogin('A001','A1D1')">管理者</button></div><div class="demo-grid"><button class="btn ghost" onclick="openReception()">QR受付専用画面</button><button class="btn ghost" onclick="openDisplay()">玄関ディスプレイ</button></div></div></div></div>`}
+function loginView(){app.innerHTML=`<div class="login-shell"><div class="login-card"><div class="brand"><div class="brand-mark">🚌</div><div><div>スクールバス乗車管理</div><div class="muted small">PWA 試作版 v0.9</div></div></div><div class="notice" style="margin-top:16px">実在の個人情報は使用していません。データはこのブラウザ内だけに保存されます。</div><div class="form-row"><div><label>ユーザーID</label><input id="loginId" placeholder="例 S001"></div><div><label>4桁英数PIN</label><input id="loginPin" maxlength="4" placeholder="例 A1B2"></div></div><button class="btn" style="width:100%;margin-top:12px" onclick="login()">ログイン</button><div class="demo-box"><b>デモログイン</b><div class="demo-grid"><button class="btn secondary" onclick="demoLogin('student')">児童・生徒</button><button class="btn secondary" onclick="demoLogin('parent')">保護者</button><button class="btn secondary" onclick="demoLogin('teacher')">先生</button><button class="btn secondary" onclick="demoLogin('admin')">管理者</button></div><div class="demo-grid"><button class="btn ghost" onclick="openReception()">QR受付専用画面</button><button class="btn ghost" onclick="openDisplay()">玄関ディスプレイ</button></div></div></div></div>`}
 function quickLogin(id,pin){document.getElementById("loginId").value=id;document.getElementById("loginPin").value=pin;login()}
+function demoLogin(role){
+ const d=db(); let u=null;
+ if(role==="student"){
+  u=d.students.find(x=>x.id==="S001");
+  if(!u){u=deepClone(BASE_STUDENTS.find(x=>x.id==="S001"));d.students.unshift(u);save(d)}
+  session={id:u.id,name:u.name,role:"student"};
+ }else if(role==="parent"){
+  if(!d.students.find(x=>x.id==="S001")){const st=deepClone(BASE_STUDENTS.find(x=>x.id==="S001"));d.students.unshift(st);save(d)}
+  u=PARENTS.find(x=>x.id==="P001");session={id:u.id,name:u.name,role:"parent"};
+ }else if(role==="teacher"){
+  u=d.teacherAccounts.find(x=>x.id==="T001");
+  if(!u){u=deepClone(TEACHERS.find(x=>x.id==="T001"));d.teacherAccounts.unshift(u);save(d)}
+  session={id:u.id,name:u.name,role:"teacher"};
+ }else if(role==="admin"){
+  u=d.adminAccounts.find(x=>x.id==="A001");
+  if(!u){u=deepClone(ADMINS.find(x=>x.id==="A001"));d.adminAccounts.unshift(u);save(d)}
+  session={id:u.id,name:u.name,role:"admin"};
+ }
+ if(!session){toast("デモアカウントを開始できませんでした");return}
+ sessionStorage.setItem("busSessionV04",JSON.stringify(session));currentTab="today";render();
+}
 function login(){const id=document.getElementById("loginId").value.trim().toUpperCase(),pin=document.getElementById("loginPin").value.trim().toUpperCase();const d=db();let u=d.students.find(x=>x.id===id&&x.pin===pin);if(u)session={id:u.id,name:u.name,role:"student"};if(!u){u=PARENTS.find(x=>x.id===id&&x.pin===pin);if(u)session={id:u.id,name:u.name,role:"parent"}}if(!u){u=d.teacherAccounts.find(x=>x.id===id&&x.pin===pin);if(u)session={id:u.id,name:u.name,role:"teacher"}}if(!u){u=d.adminAccounts.find(x=>x.id===id&&x.pin===pin);if(u)session={id:u.id,name:u.name,role:"admin"}}if(!u){toast("IDまたはPINが違います");return}sessionStorage.setItem("busSessionV04",JSON.stringify(session));currentTab="today";render()}
 function logout(){session=null;sessionStorage.removeItem("busSessionV04");if(displayTimer)clearInterval(displayTimer);loginView()}
 function openDisplay(){session={id:"DISPLAY",name:"玄関ディスプレイ",role:"display"};sessionStorage.setItem("busSessionV04",JSON.stringify(session));render()}
 function openReception(){session={id:"RECEPTION",name:"QR受付",role:"reception"};sessionStorage.setItem("busSessionV04",JSON.stringify(session));render()}
-function topBar(){return `<div class="topbar"><a class="brand-home" href="./?home=v08" title="トップ画面へ"><div class="brand-mark">🚌</div><div>スクールバス</div></a><div class="top-actions"><span class="pill">${roleLabel(session.role)}：${esc(session.name)}</span><label class="small" style="margin:0">デモ時刻 <select onchange="setDemoTime(this.value)" style="width:auto;margin-left:4px">${["08:35","08:45","09:10","13:20","13:25","15:00","15:05","16:20","16:25","17:50","17:55"].map(t=>`<option ${t===demoTime?"selected":""}>${t}</option>`).join("")}</select></label><button class="btn secondary" onclick="logout()">ログアウト</button></div></div>`}
-function goHome(){window.location.href="./?home=v08"}
+function topBar(){return `<div class="topbar"><button type="button" class="brand-home" onclick="returnToLogin()" title="ログイン画面へ戻る"><div class="brand-mark">🚌</div><div>スクールバス</div></button><div class="top-actions"><span class="pill">${roleLabel(session.role)}：${esc(session.name)}</span><label class="small" style="margin:0">デモ時刻 <select onchange="setDemoTime(this.value)" style="width:auto;margin-left:4px">${["08:35","08:45","09:10","13:20","13:25","15:00","15:05","16:20","16:25","17:50","17:55"].map(t=>`<option ${t===demoTime?"selected":""}>${t}</option>`).join("")}</select></label><button class="btn secondary" onclick="logout()">ログアウト</button></div></div>`}
+function returnToLogin(){session=null;sessionStorage.removeItem("busSessionV04");currentTab="today";boardingDraft={};if(displayTimer){clearInterval(displayTimer);displayTimer=null}loginView();window.scrollTo({top:0,left:0,behavior:"instant"})}
 function setDemoTime(v){demoTime=v;localStorage.setItem("busDemoTimeV04",v);render()}
 function render(){try{if(!session){loginView();return}if(session.role==="display"){renderDisplay();return}if(session.role==="reception"){renderReception();return}if(["student","parent"].includes(session.role))renderFamily();else renderStaff();maybeReminder()}catch(e){app.innerHTML=`<div class="login-shell"><div class="login-card"><h2>起動エラー</h2><div class="notice danger">${esc(e.message)}</div><button class="btn" onclick="logout()">ログイン画面へ戻る</button></div></div>`;console.error(e)}}
 function maybeReminder(){if(!["student","parent"].includes(session.role))return;const s=currentStudent();if(!s?.busCommuter)return;const sch=getSchedule(DEMO_DAY,s.id);const m=minOf(demoTime),rem=minOf(db().settings.reminder),dl=minOf(db().settings.deadline);if(!sch&&m>=rem&&m<dl)setTimeout(()=>toast(`⚠ 本日の申告が未完了です。${db().settings.deadline}までに登録してください。`,6000),200)}
